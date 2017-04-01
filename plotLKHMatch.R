@@ -14,6 +14,10 @@ library(rjson)
 year <- 2012
 
 cont <- TRUE
+
+# TODO: colouring that suits the parties
+# TODO: only time, not date
+# TODO: 
 while (cont==TRUE){
   data <- read.csv(paste0("kuntavaalit",year,"/results_latest.csv"))
   valt_puolueet <- unique(filter(data, electedInformation=="ELECTED")$abbr)
@@ -29,7 +33,9 @@ while (cont==TRUE){
     select(comparativeIndex) %>%
     min()
   ggplot(filter(data, abbr %in% valt_puolueet), aes(x=LKH_match, y=comparativeIndex)) + geom_point(aes(color=abbr)) + 
-    scale_y_log10() + geom_smooth(method="lm") + ggtitle(paste0("Laskentatilanne: ", version$calculationStatusPercent, 
+    scale_y_log10() + 
+    # geom_smooth(method="lm") + 
+    ggtitle(paste0("Laskentatilanne: ", version$calculationStatusPercent, 
                                                                 "%", ", ", version$created)) +
     geom_hline(yintercept = lastElected, colour = 'green') + geom_hline(yintercept = lastReserve, colour = 'red')
   

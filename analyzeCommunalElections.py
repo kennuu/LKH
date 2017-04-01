@@ -7,9 +7,7 @@ import pandas
 import urllib2
 import json
 import time
-import glob
 from sklearn import preprocessing
-from sklearn.preprocessing import Imputer
 
 wait_time = 10  # wait time in seconds before trying to fetch new data from S3
 year = 2012
@@ -133,6 +131,12 @@ def readTargetVector(year):
         # reshape needed because pandas thoughts numpy vector as nx1
     return target_vector
 
+def getTargetVector(method, opinions = ''):
+    if type(method)=='int':
+        return readTargetVector(year)
+    else:
+        return pandas.DataFrame([])
+
 def matchCandidateswithTarget(opinions, target):
     matched_columns = pandas.concat([opinions, target], join='outer')
     opinions = np.array(matched_columns.filter(regex='\|'))
@@ -149,7 +153,7 @@ def matchCandidateswithTarget(opinions, target):
 cont = True
 saved_version = -1
 candidate_opinions = processOpinions(year)
-target_vector = readTargetVector(year)
+target_vector = getTargetVector(year)
 
 candidate_matches = matchCandidateswithTarget(candidate_opinions, target_vector)
 
