@@ -9,9 +9,6 @@ import json
 import time
 from sklearn import preprocessing
 
-wait_time = 10  # wait time in seconds before trying to fetch new data from S3
-year = 2012
-fields = ['caid', 'abbr', 'firstname', 'lastname', 'electedInformation', 'comparativeIndex']
 
 def elected(x):
     try:
@@ -20,7 +17,8 @@ def elected(x):
         return False
 
 def checkIfNewResults(year):
-    latestVersion_url = 'https://vaalit-test.yle.fi/content/kv' + str(year) + '/latestVersion.json'
+    latestVersion_url = 'https://vaalit.yle.fi/content/kv2017/latestVersion.json' # real results
+    # latestVersion_url = 'https://vaalit-test.yle.fi/content/kv' + str(year) + '-s1/latestVersion.json'
 
     print('retrieving the latest version information from ' + latestVersion_url)
     try:
@@ -30,7 +28,7 @@ def checkIfNewResults(year):
         if calculationStatusPercent == 0:
             print('no votes reported yet')
         else:
-            print('votes calculated: ' + str(calculationStatusPercent))
+            print('Total votes calculated: ' + str(calculationStatusPercent))
         latestVersionNumber = latestVersion['mainVersion']
 
         print('the latest data is version ' + str(latestVersionNumber))
@@ -57,8 +55,10 @@ def checkIfNewResults(year):
 def readElectionResults(fields, year, latestVersionNumber):
     candidates = []
     try:
-        pollingresult = 'https://vaalit-test.yle.fi/content/kv' + str(year) + '/' + str(
+        pollingresult = 'https://vaalit.yle.fi/content/kv2017/' + str(
             latestVersionNumber) + '/electorates/1/municipalities/91/partyAndCandidateResults.json'
+        # pollingresult = 'https://vaalit-test.yle.fi/content/kv' + str(year) + '-s1/' + str(
+        #     latestVersionNumber) + '/electorates/1/municipalities/91/partyAndCandidateResults.json'
 
         print('retrieving the latest candidate data from ' + pollingresult)
         # try to read the candidate data from the local file system first
@@ -70,6 +70,7 @@ def readElectionResults(fields, year, latestVersionNumber):
 
         candidates = results['candidateResults']
         print('found results for ' + str(len(candidates)) + ' candidates')
+        print('Helsinki votes calculated: ' + str(results['calculationStatus']['calculationStatusPercent']) + '%')
         # candidates_elected = filter(elected, candidates)
     except:
         pass
@@ -131,14 +132,22 @@ def readTargetVector(year):
         # reshape needed because pandas thoughts numpy vector as nx1
     return target_vector
 
+def averageOverCandidates(candidateList, opinions):
+    print 'averaging over candidates to produce the target vector'
+    print candidateList
+    return []
 def getTargetVector(method, opinions = ''):
-    if type(method)=='int':
+    # TODO: add possiblity to average over some list of candidate opinions to produce the target vector
+    if isinstance(method, int):
         return readTargetVector(year)
+    elif isinstance(method, list):
+        return averageOverCandidates(method, opinions)
     else:
         return pandas.DataFrame([])
 
 def matchCandidateswithTarget(opinions, target):
     matched_columns = pandas.concat([opinions, target], join='outer')
+    matched_columns = matched_columns.fillna(matched_columns.mean())
     opinions = np.array(matched_columns.filter(regex='\|'))
     target = opinions[-1,]
     match = np.dot(opinions[:-1,], target)
@@ -150,9 +159,14 @@ def matchCandidateswithTarget(opinions, target):
 
 
 # main
+wait_time = 300  # wait time in seconds before trying to fetch new data from S3
+year = 2017
+fields = ['caid', 'abbr', 'firstname', 'lastname', 'electedInformation', 'comparativeIndex', 'totalVotes']
+targetCandidates = [['Mikko', 'Särelä'], ['Otso', 'Kivekäs']]
 cont = True
 saved_version = -1
 candidate_opinions = processOpinions(year)
+# target_vector = getTargetVector(targetCandidates, candidate_opinions)
 target_vector = getTargetVector(year)
 
 candidate_matches = matchCandidateswithTarget(candidate_opinions, target_vector)
